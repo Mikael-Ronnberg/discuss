@@ -2,4 +2,6 @@
 
 //import * as auth from "@/auth";
 
-export async function createPost() {}
+export async function createPost() {
+  //TODO: revalidate the topic show page
+}
