@@ -22,6 +22,7 @@ interface CreatePostFormState {
 }
 
 export async function createPost(
+  slug: string,
   formState: CreatePostFormState,
   formData: FormData
 ): Promise<CreatePostFormState> {
@@ -37,6 +38,7 @@ export async function createPost(
   }
 
   const session = await auth();
+
   if (!session || !session.user) {
     return {
       errors: {
@@ -45,8 +47,45 @@ export async function createPost(
     };
   }
 
-  return {
-    errors: {},
-  };
-  //TODO: revalidate the topic show page
+  const topic = await db.topic.findFirst({
+    where: { slug },
+  });
+
+  if (!topic) {
+    return {
+      errors: {
+        _form: ["Cannot find topic"],
+      },
+    };
+  }
+
+  let post: Post;
+
+  try {
+    post = await db.post.create({
+      data: {
+        title: result.data.title,
+        content: result.data.content,
+        userId: session.user.id as string,
+        topicId: topic.id,
+      },
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      return {
+        errors: {
+          _form: [err.message],
+        },
+      };
+    } else {
+      return {
+        errors: {
+          _form: ["Failed to create post"],
+        },
+      };
+    }
+  }
+
+  revalidatePath(paths.topicShow(slug));
+  redirect(paths.postShow(slug, post.id));
 }
